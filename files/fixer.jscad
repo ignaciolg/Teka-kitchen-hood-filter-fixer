@@ -1,109 +1,158 @@
-var w = 59.5,
-    d = 24,
-    h = 5.5;
-    
-var lateral = 7.5;
-var tip = 5;
-var spring = 4.5
+var w = 160,
+    d = 30,
+    h = 9;
 
+var cageMargin = 50;
+var lateralPieceW = 9; // lateral W for the small pieces
+var lateralMax = 8.5;
+var lateralMin = 7;
+var frontWall = 2.2; //front wall
+var topDownLayer = 1; // top and down layer
+var backCageW = 39; // back cage width
 
 function createCube(params) {
     return cube(params);
 }
-function createRegularPrism(params) {
-     var w = params.size[0],
-        d = params.size[1], 
-        h = params.size[2];
-        
-    return polyhedron({      // openscad-like (e.g. pyramid)
-        points: [ 
-            [0,0,0],    [0,d,0],   [w,0,0],   [w, d, 0], //base 4 poins
-            [0,0,h],   [0,d,h]
-        ],                                  // top 2 points
-        triangles: [
-            [0,2,1],    [2,3,1],    // base
-            [0,1,4],    [1,5,4],    // back wall
-            [0,4,2],    [5,1,3],    // laterals
-            [2,4,5],    [3,2,5]     // top
-        ]                           
-    });
-   
-}
+function removeCage (origin) {
+    var cW = 60,
+        cD = 24,
+        cH = 7;
+    
+    var a = createCube({size: [cW,cD,cH]});
 
-function removeFront(origin) {
-     var cW = w-2*lateral,
-        cD = d-lateral,
+    return difference(origin,
+        a.translate([cageMargin,0,1])
+    );
+}
+function removeTopCage(origin) {
+    var cW = 47.7,
+        cD = 17.6,
+        cH = topDownLayer;
+    
+    var a = createCube({size: [cW,cD,cH]});
+
+    return difference(origin,
+        a.translate([55.5,0,h-topDownLayer])
+    );
+}
+function removeLaterals(origin) {
+    var cW = lateralPieceW,
+        cD = 30, 
+        cH = topDownLayer;
+        
+    var wall = frontWall;
+   
+    var params = {size: [cW,cD,cH]};
+    
+    var a = new createCube(params),
+        b = new createCube(params),
+        c = new createCube(params),
+        d = new createCube(params);
+    
+    return difference(origin,
+        a.translate([0,wall,0]),
+        b.translate([0,wall,h-cH]),
+        c.translate([w-cW,wall,0]),
+        d.translate([w-cW,wall,h-cH])
+  );
+}
+function removeBottomLateral(origin) {
+    var cW = lateralPieceW,
+        cD = 4.5,
         cH = h;
+    
+    var params = {size: [cW,cD,cH]};
+    var cA = new createCube(params),
+        cB = new createCube(params);
+        
+    return difference(origin,
+        cA.translate([0,d-cD,0]),
+        cB.translate([w-cW,d-cD,0])
+    )
+}
+function removeLateralLateral(origin) {
+    var margin = frontWall;
+    
+    var cW = frontWall,
+        cD = d,
+        cH = h;
+    
+    var params = {size: [cW,cD,cH]};
+    
+    var cA = new createCube(params),
+        cB = new createCube(params);
+        
+    return difference(origin,
+        cA.translate([0,margin,0]),
+        cB.translate([w-margin,margin,0])
+    )
+}
+function removeRail(origin) {
+    var margin = topDownLayer;
+    
+    var cW = w,
+        cD = 5,
+        cH = h-(2*topDownLayer);
     
     var params = {size: [cW,cD,cH]};
     
     var cA = new createCube(params);
 
     return difference(origin,
-        cA.translate([lateral,0,0])
+        cA.translate([0,d-cD,margin])
     );
 }
-function removeTip(origin){
-    var margin = 1.7;
-    var cW = w,
-        cD = tip,
-        cH = margin;
+function removeBackCages(origin) {
+//    return origin;
+     var margin = topDownLayer;
+    
+    var cW = backCageW,
+        cD = d-frontWall,
+        cH = h-(2*topDownLayer);
     
     var params = {size: [cW,cD,cH]};
     
-    var a = new createCube(params);
-    var b = new createCube(params);
+    var a = new createCube(params),
+        b = new createCube(params);
 
     return difference(origin,
-        a.translate([0,0,0]),
-        b.translate([0,0,h-margin])
+        a.translate([lateralPieceW+1,d-cD,margin]),
+        b.translate([w-lateralPieceW-cW-1,d-cD,margin]) // total w - lateral piece - cage w
     );
 }
-function removeSpringCages(origin) {
-     var side = 4;
-    var cW = side,
-        cD = 18,
-        cH = side;
+function removeRailCage(origin) {
+//   return origin;
+  var margin = topDownLayer;
+    
+    var cW = 2,
+        cD =20,
+        cH = 2;
     
     var params = {size: [cW,cD,cH]};
     
-    var a = new createCube(params);
-    var b = new createCube(params);
+    var a = new createCube(params),
+        b = new createCube(params);
 
     return difference(origin,
-        a.translate([1,tip+1,(h-side)/2]),
-        b.translate([w-side-1,tip+1,(h-side)/2])
-    );
-}
-
-function addResort(origin) {
-    var margin = 1.5;
-     var cW = 10,
-        cD = 1,
-        cH = 1;
-        var params = {size: [cW,cD,cH]};
-
-    var a = rotate([-90,0,90],createRegularPrism(params)),
-        b = rotate([90,0,90],createRegularPrism(params))
-
-    return union(origin,
-    a.translate([0,tip+margin,(h/2)+(cH/2)]),
-    b.translate([w,tip+margin,(h/2)-(cH/2)])
-    
-    );
-}
+        a.translate([cageMargin-1,2,(h/2)-(cH/2)]),
+        b.translate([w-cageMargin,2,(h/2)-(cH/2)]) // total w - lateral piece - cage w
+    );}
 
 function main () {
     var block = createCube({size: [w,d,h]});
-    //var prism = createRegularPrism({size: [10,4,4]})
     
     var result = 
-        addResort(
-        removeSpringCages(
-        removeTip(
-        removeFront(
-        block))));
+        removeRailCage(
+        removeBackCages(
+        removeRail(
+        removeLateralLateral(
+        removeBottomLateral(
+        removeLaterals(
+        removeTopCage(
+        removeCage(block)
+    )))))));
+  
 
-  return [result];
+  return result;
 
 }
